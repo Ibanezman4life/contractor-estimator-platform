@@ -3,7 +3,7 @@ from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
 
 
-SortOption = Literal["cheapest", "nearest", "fastest", "lowest_shipping"]
+SortOption = Literal["cheapest", "nearest", "fastest", "lowest_shipping", "best_value"]
 
 
 class SupplierSearchRequest(BaseModel):
@@ -22,7 +22,7 @@ class SupplierOption(BaseModel):
     distance_miles: Optional[float] = None
     in_stock: bool = True
     pickup_available: bool = False
-    supplier_type: str  # local or online
+    supplier_type: str
 
 
 class MaterialResult(BaseModel):

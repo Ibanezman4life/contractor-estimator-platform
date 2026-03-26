@@ -191,18 +191,51 @@ def detect_materials_for_job(job_type: str) -> List[MaterialResult]:
     ]
 
 
+def total_landed_cost(option: SupplierOption) -> float:
+    return round(option.price + option.shipping_cost, 2)
+
+
+def best_value_score(option: SupplierOption) -> float:
+    distance_penalty = option.distance_miles if option.distance_miles is not None else 25
+    shipping_penalty = option.shipping_days * 2
+    pickup_bonus = -3 if option.pickup_available else 0
+    stock_penalty = 0 if option.in_stock else 1000
+    return total_landed_cost(option) + distance_penalty + shipping_penalty + pickup_bonus + stock_penalty
+
+
 def sort_supplier_options(options: List[SupplierOption], sort_by: str) -> List[SupplierOption]:
     if sort_by == "cheapest":
-        return sorted(options, key=lambda x: x.price + x.shipping_cost)
+        return sorted(options, key=lambda x: total_landed_cost(x))
 
     if sort_by == "nearest":
-        return sorted(options, key=lambda x: x.distance_miles if x.distance_miles is not None else 999999)
+        return sorted(
+            options,
+            key=lambda x: (
+                x.distance_miles if x.distance_miles is not None else 999999,
+                total_landed_cost(x),
+            ),
+        )
 
     if sort_by == "fastest":
-        return sorted(options, key=lambda x: x.shipping_days)
+        return sorted(
+            options,
+            key=lambda x: (
+                x.shipping_days,
+                total_landed_cost(x),
+            ),
+        )
 
     if sort_by == "lowest_shipping":
-        return sorted(options, key=lambda x: x.shipping_cost)
+        return sorted(
+            options,
+            key=lambda x: (
+                x.shipping_cost,
+                total_landed_cost(x),
+            ),
+        )
+
+    if sort_by == "best_value":
+        return sorted(options, key=lambda x: best_value_score(x))
 
     return options
 
