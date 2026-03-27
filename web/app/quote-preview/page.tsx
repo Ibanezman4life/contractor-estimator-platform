@@ -4,12 +4,17 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
   clearQuotePreview,
-  getCompanySettings,
   getQuotePreview,
   SavedQuotePayload,
   CompanySettings,
   TemplateOptions,
 } from '../../lib/quote-storage';
+
+const API_URL = 'http://127.0.0.1:8000';
+
+function getUserId() {
+  return 'test-user';
+}
 
 const defaultTemplateOptions: TemplateOptions = {
   showScopeOfWork: true,
@@ -46,7 +51,10 @@ function normalizeCompanySettings(
     helperLaborRate: incoming?.helperLaborRate ?? '',
     tripCharge: incoming?.tripCharge ?? '',
     minimumServiceCall: incoming?.minimumServiceCall ?? '',
-    defaultSupplierSort: incoming?.defaultSupplierSort ?? 'price',
+    defaultSupplierSort:
+      (incoming as any)?.defaultSupplierSort ??
+      (incoming as any)?.preferredSupplierSort ??
+      'price',
     templateOptions: normalizeTemplateOptions(incoming?.templateOptions),
   };
 }
@@ -59,10 +67,23 @@ export default function QuotePreviewPage() {
 
   useEffect(() => {
     const savedQuote = getQuotePreview();
-    const savedCompanySettings = getCompanySettings();
-
     setQuote(savedQuote);
-    setCompanySettings(normalizeCompanySettings(savedCompanySettings));
+
+    const loadCompanySettings = async () => {
+      try {
+        const userId = getUserId();
+        const res = await fetch(`${API_URL}/company-settings/${userId}`);
+        const data = await res.json();
+
+        if (data?.data) {
+          setCompanySettings(normalizeCompanySettings(data.data));
+        }
+      } catch (error) {
+        console.error('Failed to load company settings from backend:', error);
+      }
+    };
+
+    loadCompanySettings();
   }, []);
 
   const templateOptions = useMemo(() => {

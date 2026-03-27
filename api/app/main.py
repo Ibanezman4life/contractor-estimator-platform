@@ -1,5 +1,6 @@
 import json
 import os
+import sqlite3
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI
@@ -564,3 +565,70 @@ def analyze_job(payload: AnalyzeJobRequest) -> AnalyzeJobResponse:
         fallback = build_rule_based_response(payload, settings)
         fallback.raw_response["ai_error"] = str(exc)
         return fallback
+
+
+DB_FILE = "app.db"
+
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS company_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT,
+            data TEXT
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+init_db()
+
+
+class CompanySettingsPayload(BaseModel):
+    userId: str
+    data: dict
+
+
+@app.post("/company-settings")
+def save_company_settings(settings: CompanySettingsPayload):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "DELETE FROM company_settings WHERE user_id = ?",
+        (settings.userId,)
+    )
+
+    cursor.execute(
+        "INSERT INTO company_settings (user_id, data) VALUES (?, ?)",
+        (settings.userId, json.dumps(settings.data))
+    )
+
+    conn.commit()
+    conn.close()
+
+    return {"status": "saved"}
+
+
+@app.get("/company-settings/{user_id}")
+def get_company_settings(user_id: str):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT data FROM company_settings WHERE user_id = ?",
+        (user_id,)
+    )
+
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return {"data": {}}
+
+    return {"data": json.loads(row[0])}
