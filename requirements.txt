@@ -1,0 +1,9 @@
+FastAPI
+SQLAlchemy
+Pydantic
+OpenAI
+Requests
+BeautifulSoup4
+pytest
+black
+flake8
